@@ -93,12 +93,19 @@ bool WiFi::getRequestDetected()
 
 void WiFi::sendResponse(const char* body)
 {
-//    static const char* headerPart1 = "HTTP/1.1 200 OK\r\nContent-Length: 85\r\nContent-Type: text/html\r\nConnection: Closed\r\n\r\n";
-//
-//    if (sendAT("AT+CIPSEND=0,85", SHORT_TIMEOUT))
-//    {
-//        esp8266.print(headerPart1);
-//    }
+    static const char* headerPart1 = "HTTP/1.1 200 OK\r\nContent-Length: 6\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\nHELLO!";
+
+    Serial.println(strlen(headerPart1));
+
+    if (executeAT("AT+CIPSEND=0,89", rcvBuf, RCV_BUF_SIZE))
+    {
+        int len = strlen(headerPart1);
+        esp8266.write(headerPart1, len);
+    }
+    while (esp8266.available())
+    {
+        logger.log(esp8266.read(), 1);
+    }
 }
 
 // Private

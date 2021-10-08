@@ -26,7 +26,7 @@ void Log::log(const char ch, int verbosity)
         else
         {
             Serial.print('<');
-            Serial.print(ch, DEC);
+            Serial.print((uint8_t) ch, DEC);
             Serial.print('>');
         }
     }
