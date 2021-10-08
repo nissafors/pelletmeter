@@ -29,7 +29,7 @@ public:
     bool startServer(int port);
     bool getIP(char* ipPtr);
     bool getRequestDetected();
-    void sendResponse(const char* body);
+    void sendResponse(const char* body, const char* contentType = "text/html");
 };
 
 #endif // WIFI_H

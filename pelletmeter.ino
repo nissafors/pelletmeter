@@ -8,6 +8,8 @@
 WiFi wifi(7, 6, 2);
 char ipBuf[16];
 
+const char html[] = "<!DOCTYPE html>\n<html>\n<body>\n<h1>PELLETMETER</h1>\n<p>It's working!</p>\n</body>\n</html>";
+ 
 void setup()
 {
     Serial.begin(9600);
@@ -32,7 +34,7 @@ void loop()
 {
     if (wifi.getRequestDetected())
     {
-        wifi.sendResponse("HELLO FROM PELLETMETER!");
+        wifi.sendResponse(html);
         Serial.println("It was a GET request! Response sent.");
     }
 }

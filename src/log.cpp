@@ -7,7 +7,7 @@ Log::Log(int verbosity) : verbosity(verbosity)
 {
 }
 
-void Log::log(const char ch, int verbosity)
+void Log::log(const char ch, int verbosity, bool lf)
 {
     if (verbosity <= this->verbosity)
     {
@@ -29,14 +29,39 @@ void Log::log(const char ch, int verbosity)
             Serial.print((uint8_t) ch, DEC);
             Serial.print('>');
         }
+
+        if (lf)
+        {
+            Serial.print('\n');
+        }
     }
 }
 
-void Log::log(const char* str, int verbosity)
+void Log::log(const char* str, int verbosity, bool lf)
 {
     if (verbosity <= this->verbosity)
     {
-        Serial.print(str);
+        int i = 0;
+        while (str[i] != '\0')
+        {
+            log(str[i++], verbosity);
+        }
+        if (lf)
+        {
+            Serial.print('\n');
+        }
+    }
+}
+
+void Log::log(const int i, int verbosity, bool lf)
+{
+    if (verbosity <= this->verbosity)
+    {
+        Serial.print(i);
+        if (lf)
+        {
+            Serial.print('\n');
+        }
     }
 }
 

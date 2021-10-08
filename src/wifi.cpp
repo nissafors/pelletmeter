@@ -91,20 +91,42 @@ bool WiFi::getRequestDetected()
     return result;
 }
 
-void WiFi::sendResponse(const char* body)
+void WiFi::sendResponse(const char* body, const char* contentType)
 {
-    static const char* headerPart1 = "HTTP/1.1 200 OK\r\nContent-Length: 6\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\nHELLO!";
+    const char* statusLine = "HTTP/1.1 200 OK";                     // Len 15
+    const char* contentLengthHdr = "\r\nContent-Length: ";          // Len 18
+    const char* contentTypeHdr = "\r\nContent-Type: ";              // Len 16
+    const char* connectionHdr = "\r\nConnection: close\r\n\r\n";    // Len 23
+    char contentLenStr[4];
+    char atCmdStr[18];
 
-    Serial.println(strlen(headerPart1));
+    int contentLen = strlen(body);
+    snprintf(contentLenStr, 4, "%d", contentLen);
+    int totalLen = 15 + 18 + 16 + 23 + contentLen + strlen(contentLenStr) + strlen(contentType);
+    logger.log("Msglen: ", 2);
+    logger.log(totalLen, 2, true);
 
-    if (executeAT("AT+CIPSEND=0,89", rcvBuf, RCV_BUF_SIZE))
+    snprintf(atCmdStr, 18, "AT+CIPSEND=0,%d", totalLen);
+    if (executeAT(atCmdStr, rcvBuf, RCV_BUF_SIZE))
     {
-        int len = strlen(headerPart1);
-        esp8266.write(headerPart1, len);
+        logger.log(statusLine, 2);
+        logger.log(contentLengthHdr, 2);
+        logger.log(contentLenStr, 2);
+        logger.log(contentTypeHdr, 2);
+        logger.log(contentType, 2);
+        logger.log(connectionHdr, 2);
+        logger.log(body, 2, true);
+        esp8266.write(statusLine);
+        esp8266.print(contentLengthHdr);
+        esp8266.print(contentLenStr);
+        esp8266.print(contentTypeHdr);
+        esp8266.print(contentType);
+        esp8266.print(connectionHdr);
+        esp8266.print(body);
     }
     while (esp8266.available())
     {
-        logger.log(esp8266.read(), 1);
+        logger.log((char) esp8266.read(), 1);
     }
 }
 
