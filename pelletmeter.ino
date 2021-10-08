@@ -5,7 +5,8 @@
 #include "src/wifi.h"
 #include "settings.h"
 
-WiFi wifi(7, 6);
+WiFi wifi(7, 6, 2);
+char ipBuf[16];
 
 void setup()
 {
@@ -16,9 +17,22 @@ void setup()
         PANIC("Failed to connect.");
     }
     Serial.println("Connected.");
-    
+    if (!wifi.startServer(80))
+    {
+        PANIC("Failed to connect.");
+    }
+    Serial.println("Server started.");
+    wifi.getIP(ipBuf);
+    Serial.print("IP address: ");
+    Serial.println(ipBuf);
+    Serial.println("Ready.");
 }
 
 void loop()
 {
+    if (wifi.getRequestDetected())
+    {
+        wifi.sendResponse("HELLO FROM PELLETMETER!");
+        Serial.println("It was a GET request! Response sent.");
+    }
 }
