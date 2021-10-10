@@ -14,15 +14,6 @@ Distance::Distance(int trigPin, int echoPin) : trigPin(trigPin), echoPin(echoPin
 
 uint16_t Distance::detect()
 {
-    uint32_t cm = measure();
-
-    return cm;
-}
-
-// Private
-
-uint16_t Distance::measure()
-{
     // A 10ms pulse triggers the sensor.
     digitalWrite(trigPin, LOW);
     delayMicroseconds(5);
@@ -35,5 +26,5 @@ uint16_t Distance::measure()
     uint32_t duration = pulseIn(echoPin, HIGH);
 
     // Convert to cm and return.
-    return (uint16_t)round(((double)duration / 2.0) / 29.1);
+    return (uint16_t) round((double) duration / 58.2);
 }

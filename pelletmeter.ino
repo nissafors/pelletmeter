@@ -16,6 +16,7 @@ const char html[] = "<!DOCTYPE html>\n<html>\n<body>\n<h1>PELLETMETER</h1>\n<p>D
 
 void setup()
 {
+    // Connect to WiFi
     Serial.begin(9600);
     Serial.println("Connecting to WiFi...");
     if (!wifi.connect(wifiSSID, wifiPassword))
@@ -23,11 +24,15 @@ void setup()
         PANIC("Failed to connect.");
     }
     Serial.println("Connected.");
+
+    // Start "HTTP server"
     if (!wifi.startServer(80))
     {
         PANIC("Failed to connect.");
     }
     Serial.println("Server started.");
+
+    // Get IP
     wifi.getIP(ipBuf);
     Serial.print("IP address: ");
     Serial.println(ipBuf);
@@ -39,6 +44,7 @@ void loop()
     static char htmlOut[HTML_MAX_LEN];
     static uint16_t cm = 0;
 
+    // Detect HTTP GET requests and respond
     if (wifi.getRequestDetected())
     {
         snprintf(htmlOut, HTML_MAX_LEN, html, cm);
@@ -46,6 +52,7 @@ void loop()
         Serial.println("It was a GET request! Response sent.");
     }
 
+    // Detect distance
     if (++delayCounter >= 100)
     {
         delayCounter = 0;

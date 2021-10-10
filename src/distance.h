@@ -9,11 +9,6 @@
 
 class Distance
 {
-private:
-    uint32_t measurementsCircBuf[16];
-    uint8_t head;
-    uint8_t tail;
-    uint16_t measure();
 public:
     int trigPin;
     int echoPin;

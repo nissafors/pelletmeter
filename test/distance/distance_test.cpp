@@ -1,10 +1,19 @@
+/* Copyright (C) 2021 Andreas Andersson */
+
 #include "CppUTest/CommandLineTestRunner.h"
 #include "CppUTest/TestHarness.h"
 #include "distance.h"
 #include "stub.h"
 #include "Arduino.h"
+#include <math.h>
 
-TEST_GROUP(FirstTestGroup)
+// Function prototypes
+
+unsigned long cmToPulse(int cm);
+
+// Test groups
+
+TEST_GROUP(testGroupNormal)
 {
     void setup()
     {
@@ -17,7 +26,9 @@ TEST_GROUP(FirstTestGroup)
     }
 };
 
-TEST(FirstTestGroup, testConstruct)
+// Tests
+
+TEST(testGroupNormal, testConstruct)
 {
     Distance distance(1, 2);
     CHECK_EQUAL(1, distance.trigPin);
@@ -26,16 +37,23 @@ TEST(FirstTestGroup, testConstruct)
     CHECK_EQUAL(INPUT, stubGetPinMode(distance.echoPin));
 }
 
-TEST(FirstTestGroup, detect)
+TEST(testGroupNormal, testDetect)
 {
     Distance distance(1, 2);
-    stubSetPulseIn(291); // 291us = 5cm
+    stubSetPulseIn(cmToPulse(5));
     CHECK_EQUAL(5, distance.detect());
-    stubSetPulseIn(5820); // 5820 = 100cm
+    stubSetPulseIn(cmToPulse(100));
     CHECK_EQUAL(100, distance.detect());
 }
+
+// Functions
 
 int main(int ac, char** av)
 {
     return CommandLineTestRunner::RunAllTests(ac, av);
+}
+
+unsigned long cmToPulse(int cm)
+{
+    return (unsigned long) round((double) cm * 58.2);
 }

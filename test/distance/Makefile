@@ -17,7 +17,7 @@ LIB_DIRS =-L$(PROJ_DIR)/cpputest/cpputest_build/lib
 LIBS=-lCppUTest
 
 CC=g++
-CXXFLAGS = -Wall -Wextra -Wunreachable-code -std=gnu++11 -ggdb -O0
+CXXFLAGS = -Wall -Wextra -Wunreachable-code -std=gnu++11 -ggdb -O0 -D'UNUSED(x)=(void)(x)'
 
 VPATH = $(dir $(SOURCES))
 

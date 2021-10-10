@@ -1,3 +1,5 @@
+/* Copyright (C) 2021 Andreas Andersson */
+
 #include "stub.h"
 #include <cassert>
 #include "Arduino.h"
@@ -46,16 +48,22 @@ void pinMode(uint8_t pin, uint8_t mode)
 
 void digitalWrite(uint8_t pin, uint8_t val)
 {
+    UNUSED(pin);
+    UNUSED(val);
     assert(init);
 }
 
 void delayMicroseconds(unsigned int us)
 {
+    UNUSED(us);
     assert(init);
 }
 
 unsigned long pulseIn(uint8_t pin, uint8_t state, unsigned long timeout)
 {
     assert(init);
+    UNUSED(pin);
+    UNUSED(state);
+    UNUSED(timeout);
     return stubPulseIn;
 }
