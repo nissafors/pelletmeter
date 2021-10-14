@@ -49,7 +49,7 @@ bool WiFi::getIP(char* ipPtr)
     if (connected)
     {
         int i, j;
-        int nRead = executeAT("AT+CIFSR", rcvBuf, RCV_BUF_SIZE);
+        executeAT("AT+CIFSR", rcvBuf, RCV_BUF_SIZE);
         for (i = 0, j = 25; i < 15; i++, j++)
         {
             if (rcvBuf[j] == '"')
@@ -203,7 +203,7 @@ bool WiFi::readByte(char* chPtr, int timeout)
     bool result = false;
     unsigned long start = millis();
 
-    while (millis() - start < timeout)
+    while (millis() - start < (unsigned long) timeout)
     {
         if (esp8266.available())
         {
