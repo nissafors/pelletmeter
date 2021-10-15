@@ -20,7 +20,7 @@ bool WiFi::connect(const char* name, const char* pwd)
 {
     esp8266.begin(9600);
 
-    if (executeAT("AT+CWMODE=1", rcvBuf, RCV_BUF_SIZE))
+    if (executeAT("AT+CWMODE=3", rcvBuf, RCV_BUF_SIZE))
     {
         snprintf(cmdBuf, CMD_BUF_SIZE, "AT+CWJAP=\"%s\",\"%s\"", name, pwd);
         connected = executeAT(cmdBuf, rcvBuf, RCV_BUF_SIZE);
@@ -137,33 +137,35 @@ bool WiFi::executeAT(const char* cmd, char* rcvPtr, int len)
     bool result = false;
     int i = 0;
 
-    esp8266.println(cmd);
-
-    // Flush buffers
-    esp8266.flush();
+    // Flush rx buffer
     while (esp8266.available())
     {
         esp8266.read();
     }
 
-    // Send command and parse response
-    while (i < len)
+    // Send command
+    esp8266.println(cmd);
+
+    // Parse response
+    while (readByte(&rcvPtr[i], SHORT_TIMEOUT))
     {
-        if (esp8266.available())
+        logger.log(rcvPtr[i], 1);
+
+        if (i > 3 && strncmp(&rcvPtr[i-3], "OK\r\n", 4) == 0)
         {
-            rcvPtr[i] = esp8266.read();
-            logger.log(rcvPtr[i], 1);
-            if (i > 3 && strncmp(&rcvPtr[i-3], "OK\r\n", 4) == 0)
-            {
-                result = true;
-                break;
-            }
-            if (i > 6 && strncmp(&rcvPtr[i-6], "ERROR\r\n", 7) == 0)
-            {
-                result = false;
-                break;
-            }
-            i++;
+            result = true;
+            break;
+        }
+
+        if (i > 6 && strncmp(&rcvPtr[i-6], "ERROR\r\n", 7) == 0)
+        {
+            result = false;
+            break;
+        }
+
+        if (++i >= len)
+        {
+            break;
         }
     }
     

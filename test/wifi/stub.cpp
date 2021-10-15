@@ -5,12 +5,29 @@
 #include "Arduino.h"
 #include "SoftwareSerial.h"
 #include "log.h"
+#include <string>
+#include <deque>
 
 bool init = false;
+int logVerbosity;
+uint8_t ssRcvPin;
+uint8_t ssTmtPin;
+std::deque<std::string> atCommands;
+std::deque<std::string> atResponses;
+std::string buffer;
+int bufIdx;
+unsigned long ms;
 
 void stubInit()
 {
     init = true;
+    logVerbosity = 0;
+    ssRcvPin = 0;
+    ssTmtPin = 0;
+    atCommands.clear();
+    buffer.clear();
+    bufIdx = 0;
+    ms = 0;
 }
 
 void stubDeinit()
@@ -19,13 +36,37 @@ void stubDeinit()
 }
 
 // Spies
+int stubGetLogVerbosity()
+{
+    assert(init);
+    return logVerbosity;
+}
+
+uint8_t stubGetSSReceivePin()
+{
+    assert(init);
+    return ssRcvPin;
+
+}
+
+uint8_t stubGetSSTransmitPin()
+{
+    assert(init);
+    return ssTmtPin;
+}
+
+void stubAppendAtCommand(std::string cmd, std::string response)
+{
+    atCommands.push_back(cmd);
+    atResponses.push_back(response);
+}
 
 // Stubs
 
 SoftwareSerial::SoftwareSerial(uint8_t receivePin, uint8_t transmitPin)
 {
-    UNUSED(receivePin);
-    UNUSED(transmitPin);
+    ssRcvPin = receivePin;
+    ssTmtPin = transmitPin;
 }
 
 void SoftwareSerial::begin(long speed)
@@ -41,12 +82,14 @@ size_t SoftwareSerial::write(const char *str)
 
 int SoftwareSerial::read()
 {
-    return 0;
+    char byte = buffer[0];
+    buffer.erase(0, 1);  
+    return byte;
 }
 
 int SoftwareSerial::available()
 {
-    return 0;
+    return buffer.length();
 }
 
 size_t SoftwareSerial::print(const char* str)
@@ -57,8 +100,13 @@ size_t SoftwareSerial::print(const char* str)
 
 size_t SoftwareSerial::println(const char* str)
 {
-    UNUSED(str);
-    return 0;
+    if (atCommands.front() == str)
+    {
+        atCommands.pop_front();
+        buffer += atResponses.front();
+        atResponses.pop_front();
+    }
+    return strlen(str);
 }
 
 void SoftwareSerial::flush()
@@ -67,7 +115,7 @@ void SoftwareSerial::flush()
 
 Log::Log(int verbosity)
 {
-    UNUSED(verbosity);
+    logVerbosity = verbosity;
 }
 
 void Log::log(const char ch, int verbosity, bool lf)
@@ -93,5 +141,5 @@ void Log::log(const int i, int verbosity, bool lf)
 
 unsigned long millis()
 {
-    return 0L;
+    return ms++;
 }

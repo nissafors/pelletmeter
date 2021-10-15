@@ -5,6 +5,7 @@
 #include "wifi.h"
 #include "stub.h"
 #include "Arduino.h"
+#include "SoftwareSerial.h"
 
 // Function prototypes
 
@@ -25,9 +26,20 @@ TEST_GROUP(testGroupNormal)
 
 // Tests
 
-TEST(testGroupNormal, testFail)
+TEST(testGroupNormal, testConstruct)
 {
-    FAIL("Always fail!");
+    WiFi(10, 11, 2);
+    CHECK_EQUAL( 10, stubGetSSReceivePin() );
+    CHECK_EQUAL( 11, stubGetSSTransmitPin() );
+    CHECK_EQUAL( 2, stubGetLogVerbosity() );
+}
+
+TEST(testGroupNormal, testConnectSuccessfully)
+{
+    auto wifi = WiFi(10, 11, 2);
+    stubAppendAtCommand("AT+CWMODE=3", "\r\n\r\nOK\r\n");
+    stubAppendAtCommand("AT+CWJAP=\"testName\",\"testPwd\"", "\r\nWIFI CONNECTED\r\nWIFI GOT IP\r\n\r\nOK\r\n");
+    CHECK( wifi.connect("testName", "testPwd") );
 }
 
 // Functions
