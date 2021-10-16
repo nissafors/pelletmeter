@@ -12,34 +12,30 @@ static const int LONG_TIMEOUT = 10000;
 WiFi::WiFi(int rx, int tx, int verbosity) : esp8266(rx, tx), logger(verbosity)
 {
     connected = false;
-    requestBufIdx = 0;
-    memset(requestBuf, 0, REQUEST_BUF_SIZE);
 }
 
-bool WiFi::connect(const char* name, const char* pwd)
+bool WiFi::connect(const char* ssid, const char* pwd)
 {
     esp8266.begin(9600);
 
-    if (executeAT("AT+CWMODE=3", rcvBuf, RCV_BUF_SIZE, LONG_TIMEOUT))
+    // Rest a moment before making sure we're not connected to any access points.
+    delay(200);
+    if (executeAT("AT+CWQAP", rcvBuf, RCV_BUF_SIZE, LONG_TIMEOUT))
     {
-        snprintf(cmdBuf, CMD_BUF_SIZE, "AT+CWJAP=\"%s\",\"%s\"", name, pwd);
-        connected = executeAT(cmdBuf, rcvBuf, RCV_BUF_SIZE, LONG_TIMEOUT);
+        // Wait a moment to avoid strange serial buffer behavior.
+        delay(100);
+        // Set station mode and single connection.
+        if (executeAT("AT+CWMODE=1", rcvBuf, RCV_BUF_SIZE, LONG_TIMEOUT) && executeAT("AT+CIPMUX=0", rcvBuf, RCV_BUF_SIZE, SHORT_TIMEOUT))
+        {
+            // Connect to access point.
+            snprintf(cmdBuf, CMD_BUF_SIZE, "AT+CWJAP=\"%s\",\"%s\"", ssid, pwd);
+            connected = executeAT(cmdBuf, rcvBuf, RCV_BUF_SIZE, LONG_TIMEOUT);
+        }
+
     }
+
 
     return connected;
-}
-
-bool WiFi::startServer(int port)
-{
-    bool result = false;
-
-    if (connected && executeAT("AT+CIPMUX=1", rcvBuf, RCV_BUF_SIZE, SHORT_TIMEOUT))
-    {
-        snprintf(cmdBuf, CMD_BUF_SIZE, "AT+CIPSERVER=1,%d", port);
-        result = executeAT(cmdBuf, rcvBuf, RCV_BUF_SIZE, SHORT_TIMEOUT);
-    }
-
-    return result;
 }
 
 bool WiFi::getIP(char* ipPtr)
@@ -77,70 +73,36 @@ bool WiFi::getIP(char* ipPtr)
     return false;
 }
 
-bool WiFi::getRequestDetected()
+bool WiFi::sendTCP(const char* msg, const char* address, int port)
 {
     bool result = false;
 
-    while (esp8266.available() && requestBufIdx < REQUEST_BUF_SIZE)
+    // Reuse receive buffer as command buffer and connect to given address
+    snprintf(rcvBuf, RCV_BUF_SIZE, "AT+CIPSTART=\"TCP\",\"%s\",%d", address, port);
+    if (executeAT(rcvBuf, rcvBuf, RCV_BUF_SIZE, LONG_TIMEOUT))
     {
-        requestBuf[requestBufIdx] = esp8266.read();
-        logger.log(requestBuf[requestBufIdx], 1);
-
-        if (requestBufIdx >= 4 && strncmp(&requestBuf[requestBufIdx-3], "+IPD", 4) == 0)
+        // Send
+        snprintf(rcvBuf, RCV_BUF_SIZE, "AT+CIPSEND=%d", (int) strlen(msg));
+        if (executeAT(rcvBuf, rcvBuf, RCV_BUF_SIZE, LONG_TIMEOUT))
         {
-            requestBufIdx = 0;
-            result = isGetRequest();
-            break;
+            logger.log(msg, 2, true);
+            esp8266.print(msg);
+            char byte;
+            int i = 0;
+            while(readByte(&byte, 100))
+            {
+                logger.log(byte, 1);
+                rcvBuf[i] = byte;
+                if (i > 8 && strncmp(&rcvBuf[i-8], "SEND OK\r\n", 9) == 0)
+                {
+                    result = true;
+                }
+                i++;
+            }
         }
-
-        requestBufIdx++;
-    }
-
-    if (requestBufIdx >= REQUEST_BUF_SIZE)
-    {
-        requestBufIdx = 0;
     }
 
     return result;
-}
-
-void WiFi::sendResponse(const char* body, const char* contentType)
-{
-    const char* statusLine = "HTTP/1.1 200 OK";                     // Len 15
-    const char* contentLengthHdr = "\r\nContent-Length: ";          // Len 18
-    const char* contentTypeHdr = "\r\nContent-Type: ";              // Len 16
-    const char* connectionHdr = "\r\nConnection: close\r\n\r\n";    // Len 23
-    char contentLenStr[4];
-    char atCmdStr[18];
-
-    int contentLen = strlen(body);
-    snprintf(contentLenStr, 4, "%d", contentLen);
-    int totalLen = 15 + 18 + 16 + 23 + contentLen + strlen(contentLenStr) + strlen(contentType);
-    logger.log("Msglen: ", 2);
-    logger.log(totalLen, 2, true);
-
-    snprintf(atCmdStr, 18, "AT+CIPSEND=0,%d", totalLen);
-    if (executeAT(atCmdStr, rcvBuf, RCV_BUF_SIZE, SHORT_TIMEOUT))
-    {
-        logger.log(statusLine, 2);
-        logger.log(contentLengthHdr, 2);
-        logger.log(contentLenStr, 2);
-        logger.log(contentTypeHdr, 2);
-        logger.log(contentType, 2);
-        logger.log(connectionHdr, 2);
-        logger.log(body, 2, true);
-        esp8266.write(statusLine);
-        esp8266.print(contentLengthHdr);
-        esp8266.print(contentLenStr);
-        esp8266.print(contentTypeHdr);
-        esp8266.print(contentType);
-        esp8266.print(connectionHdr);
-        esp8266.print(body);
-    }
-    while (esp8266.available())
-    {
-        logger.log((char) esp8266.read(), 1);
-    }
 }
 
 // Private
@@ -158,6 +120,7 @@ bool WiFi::executeAT(const char* cmd, char* rcvPtr, int len, int timeout)
 
     // Send command
     esp8266.println(cmd);
+    esp8266.flush();
 
     unsigned long then = millis();
 
@@ -193,34 +156,6 @@ bool WiFi::executeAT(const char* cmd, char* rcvPtr, int len, int timeout)
         }
     }
     
-    return result;
-}
-
-bool WiFi::isGetRequest()
-{
-    bool result = false;
-
-    for (requestBufIdx = 0; requestBufIdx < REQUEST_BUF_SIZE; requestBufIdx++)
-    {
-        if (!readByte(&requestBuf[requestBufIdx], 50))
-        {
-            result = false;
-            break;
-        }
-        logger.log(requestBuf[requestBufIdx], 1);
-        if (requestBufIdx >= 14)
-        {
-            if (!result && strncmp(&requestBuf[requestBufIdx-13], "GET / HTTP/1.1", 14) == 0)
-            {
-                result = true;
-            }
-            if (strncmp(&requestBuf[requestBufIdx-3], "\r\n\r\n", 4) == 0)
-            {
-                break;
-            }
-        }
-    }
-
     return result;
 }
 

@@ -97,8 +97,7 @@ int SoftwareSerial::available()
 
 size_t SoftwareSerial::print(const char* str)
 {
-    UNUSED(str);
-    return 0;
+    return println(str);
 }
 
 size_t SoftwareSerial::println(const char* str)
@@ -149,4 +148,9 @@ unsigned long millis()
         throw std::out_of_range("ms too big.");
     }
     return ms;
+}
+
+void delay(unsigned long ms)
+{
+    UNUSED(ms);
 }

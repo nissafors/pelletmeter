@@ -9,10 +9,8 @@
 WiFi wifi(7, 6, 2);
 Distance distance(11, 12);
 char ipBuf[16];
-int delayCounter = 0;
-
-const int HTML_MAX_LEN = 128;
-const char html[] = "<!DOCTYPE html>\n<html>\n<body>\n<h1>PELLETMETER</h1>\n<p>Distance: %d</p>\n</body>\n</html>";
+const uint16_t POST_BUF_SIZE = 64;
+char postBuf[POST_BUF_SIZE];
 
 void setup()
 {
@@ -25,41 +23,27 @@ void setup()
     }
     Serial.println("Connected.");
 
-    // Start "HTTP server"
-    if (!wifi.startServer(80))
-    {
-        PANIC("Failed to connect.");
-    }
-    Serial.println("Server started.");
-
     // Get IP
     wifi.getIP(ipBuf);
     Serial.print("IP address: ");
     Serial.println(ipBuf);
     Serial.println("Ready.");
+
 }
 
 void loop()
 {
-    static char htmlOut[HTML_MAX_LEN];
     static uint16_t cm = 0;
 
-    // Detect HTTP GET requests and respond
-    if (wifi.getRequestDetected())
-    {
-        snprintf(htmlOut, HTML_MAX_LEN, html, cm);
-        wifi.sendResponse(htmlOut);
-        Serial.println("It was a GET request! Response sent.");
-    }
-
     // Detect distance
-    if (++delayCounter >= 100)
-    {
-        delayCounter = 0;
-        cm = distance.detect();
-        Serial.print("Distance: ");
-        Serial.println(cm);
-    }
+    cm = distance.detect();
+    Serial.print("Distance: ");
+    Serial.println(cm);
 
-    delay(10);
+    // Post to server
+    snprintf(postBuf, POST_BUF_SIZE, "POST / HTTP/1.1 \r\n\r\n%d", cm);
+    wifi.sendTCP(postBuf, serverAddr, serverPort);
+
+    // Wait 5s
+    delay(5000);
 }

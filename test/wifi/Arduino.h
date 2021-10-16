@@ -11,5 +11,6 @@
 #include <cstddef>
 
 unsigned long millis();
+void delay(unsigned long ms);
 
 #endif // ARDUINO_H

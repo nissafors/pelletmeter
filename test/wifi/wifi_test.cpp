@@ -9,10 +9,11 @@
 #include <stdexcept>
 
 // Function prototypes
+void connect(WiFi* wifiPtr);
 
 // Test groups
 
-TEST_GROUP(testGroupNormal)
+TEST_GROUP(testGroupBasic)
 {
     void setup()
     {
@@ -28,7 +29,7 @@ TEST_GROUP(testGroupNormal)
 // Tests
 
 // Test that transmit- and receive pins and log verbosity are set by constructor.
-TEST(testGroupNormal, testConstruct)
+TEST(testGroupBasic, testConstruct)
 {
     WiFi(10, 11, 2);
     CHECK_EQUAL( 10, stubGetSSReceivePin() );
@@ -37,11 +38,13 @@ TEST(testGroupNormal, testConstruct)
 }
 
 // Test that connect reports true when WiFi connection is successful
-TEST(testGroupNormal, testConnectSuccessfully)
+TEST(testGroupBasic, testConnectSuccessfully)
 {
     auto wifi = WiFi(10, 11, 2);
-    // Expected AT command to set SoftAP+Station, shall respond OK.
-    stubAppendAtCommand("AT+CWMODE=3", "\r\n\r\nOK\r\n");
+    // Expected AT commands to set disconnect, set station mode and accept single connection, shall respond OK.
+    stubAppendAtCommand("AT+CWQAP", "\r\n\r\nOK\r\n");
+    stubAppendAtCommand("AT+CWMODE=1", "\r\n\r\nOK\r\n");
+    stubAppendAtCommand("AT+CIPMUX=0", "\r\n\r\nOK\r\n");
     // Expected AT command to connect to WiFi, shall respond OK.
     stubAppendAtCommand("AT+CWJAP=\"testName\",\"testPwd\"", "\r\nWIFI CONNECTED\r\nWIFI GOT IP\r\n\r\nOK\r\n");
 
@@ -49,23 +52,27 @@ TEST(testGroupNormal, testConnectSuccessfully)
 }
 
 // Test that connect fails when credentials are wrong.
-TEST(testGroupNormal, testConnectFailed)
+TEST(testGroupBasic, testConnectFailed)
 {
     auto wifi = WiFi(10, 11, 2);
-    // Expected AT command to set SoftAP+Station, shall respond OK.
-    stubAppendAtCommand("AT+CWMODE=3", "\r\n\r\nOK\r\n");
+    // Expected AT commands to set disconnect, set station mode and accept single connection, shall respond OK.
+    stubAppendAtCommand("AT+CWQAP", "\r\n\r\nOK\r\n");
+    stubAppendAtCommand("AT+CWMODE=1", "\r\n\r\nOK\r\n");
+    stubAppendAtCommand("AT+CIPMUX=0", "\r\n\r\nOK\r\n");
     // Expected AT command to attempt connecting to WiFi, shall respond FAIL.
     stubAppendAtCommand("AT+CWJAP=\"wrongName\",\"wrongPwd\"", "+CWJAP:3\r\n\r\nFAIL\r\n");
 
-    CHECK_FALSE( wifi.connect("wrongName", "wrongPwd") );
+    CHECK_FALSE(wifi.connect("wrongName", "wrongPwd"));
 }
 
 // Test that connection times out if the wifi chip fails to read expected response from serial.
-TEST(testGroupNormal, testConnectTimeout)
+TEST(testGroupBasic, testConnectTimeout)
 {
     auto wifi = WiFi(10, 11, 2);
-    // Expected AT command to set SoftAP+Station, shall respond OK.
-    stubAppendAtCommand("AT+CWMODE=3", "\r\n\r\nOK\r\n");
+    // Expected AT commands to set disconnect, set station mode and accept single connection, shall respond OK.
+    stubAppendAtCommand("AT+CWQAP", "\r\n\r\nOK\r\n");
+    stubAppendAtCommand("AT+CWMODE=1", "\r\n\r\nOK\r\n");
+    stubAppendAtCommand("AT+CIPMUX=0", "\r\n\r\nOK\r\n");
     // Expected AT command to attempt connecting to WiFi, response is rubish.
     stubAppendAtCommand("AT+CWJAP=\"anyName\",\"anyPwd\"", "493qpcn8sl");
 
@@ -74,7 +81,7 @@ TEST(testGroupNormal, testConnectTimeout)
 }
 
 // Test that getIP returns false when not connected.
-TEST(testGroupNormal, testGetIPFailWhenNotConnected)
+TEST(testGroupBasic, testGetIPFailWhenNotConnected)
 {
     auto wifi = WiFi(10, 11, 2);
     char ip[16] = "aaa.bbb.ccc.ddd";
@@ -82,42 +89,51 @@ TEST(testGroupNormal, testGetIPFailWhenNotConnected)
 }
 
 // Test that can get IP address if connected.
-TEST(testGroupNormal, testGetIPWhenConnected)
+TEST(testGroupBasic, testGetIPWhenConnected)
 {
     auto wifi = WiFi(10, 11, 2);
-    // Connect to WiFi
-    stubAppendAtCommand("AT+CWMODE=3", "\r\n\r\nOK\r\n");
-    stubAppendAtCommand("AT+CWJAP=\"testName\",\"testPwd\"", "\r\nWIFI CONNECTED\r\nWIFI GOT IP\r\n\r\nOK\r\n");
-    wifi.connect("testName", "testPwd");
+    connect(&wifi);
 
     // Full length IP: 192.168.100.100
     // Expected AT command to get IP address, shall respond with info and OK.
-    stubAppendAtCommand("AT+CIFSR", "+CIFSR:APIP,\"192.168.4.1\"\r\n+CIFSR:APMAC,\"86:f3:eb:5b:10:e6\"\r\n+CIFSR:STAIP,\"192.168.100.100\"\r\n+CIFSR:STAMAC,\"84:f3:eb:5b:10:e6\"\r\n\r\nOK\r\n");
+    stubAppendAtCommand("AT+CIFSR", "+CIFSR:STAIP,\"192.168.100.100\"\r\n+CIFSR:STAMAC,\"84:f3:eb:5b:10:e6\"\r\n\r\nOK\r\n");
     // Get IP
     char ip[16] = "aaa.bbb.ccc.ddd";
     CHECK(wifi.getIP(ip));
-    STRCMP_EQUAL( "192.168.100.100", ip );
+    STRCMP_EQUAL("192.168.100.100", ip);
 
     // Shorter IP: 192.168.1.100
-    stubAppendAtCommand("AT+CIFSR", "+CIFSR:APIP,\"192.168.4.1\"\r\n+CIFSR:APMAC,\"86:f3:eb:5b:10:e6\"\r\n+CIFSR:STAIP,\"192.168.1.100\"\r\n+CIFSR:STAMAC,\"84:f3:eb:5b:10:e6\"\r\n\r\nOK\r\n");
+    stubAppendAtCommand("AT+CIFSR", "+CIFSR:STAIP,\"192.168.1.100\"\r\n+CIFSR:STAMAC,\"84:f3:eb:5b:10:e6\"\r\n\r\nOK\r\n");
     CHECK(wifi.getIP(ip));
-    STRCMP_EQUAL( "192.168.1.100", ip );
+    STRCMP_EQUAL("192.168.1.100", ip);
 }
 
 // Test that getIP return false on unexpected response.
-TEST(testGroupNormal, testGetIPFailOnBadResponse)
+TEST(testGroupBasic, testGetIPFailOnBadResponse)
 {
     auto wifi = WiFi(10, 11, 2);
-    // Connect to WiFi
-    stubAppendAtCommand("AT+CWMODE=3", "\r\n\r\nOK\r\n");
-    stubAppendAtCommand("AT+CWJAP=\"testName\",\"testPwd\"", "\r\nWIFI CONNECTED\r\nWIFI GOT IP\r\n\r\nOK\r\n");
-    wifi.connect("testName", "testPwd");
+    connect(&wifi);
 
     // Expected AT command to get IP address, malformed response.
-    stubAppendAtCommand("AT+CIFSR", "+CIFSR:APIP,\"192.168.4.1\"\r\n+CIFSR:AP___RUBBISH___:f3:eb:5b:10:e6\"\r\n\r\nOK\r\n");
+    stubAppendAtCommand("AT+CIFSR", "+CIFSR:STA___RUBBISH___:5b:10:e6\"\r\n\r\nOK\r\n");
     // Get IP
     char ip[16] = "aaa.bbb.ccc.ddd";
     CHECK_FALSE(wifi.getIP(ip));
+}
+
+// Test that can send as TCP client
+TEST(testGroupBasic, testSendTCP)
+{
+    auto wifi = WiFi(10, 11, 2);
+    connect(&wifi);
+
+    // Expected AT command to connect as TCP client, shall return OK.
+    stubAppendAtCommand("AT+CIPSTART=\"TCP\",\"http://www.fake.com\",80", "\r\n\r\nOK\r\n");
+    // Expected AT command to send 12 bytes ("test message"), shall return OK.
+    stubAppendAtCommand("AT+CIPSEND=12", "\r\n\r\nOK\r\n");
+    // This is what we send.
+    stubAppendAtCommand("test message", "Recv 12 bytes\r\n\r\nSEND OK\r\n");
+    CHECK(wifi.sendTCP("test message", "http://www.fake.com", 80));
 }
 
 // Functions
@@ -125,4 +141,13 @@ TEST(testGroupNormal, testGetIPFailOnBadResponse)
 int main(int ac, char** av)
 {
     return CommandLineTestRunner::RunAllTests(ac, av);
+}
+
+void connect(WiFi* wifiPtr)
+{
+    stubAppendAtCommand("AT+CWQAP", "\r\n\r\nOK\r\n");
+    stubAppendAtCommand("AT+CWMODE=1", "\r\n\r\nOK\r\n");
+    stubAppendAtCommand("AT+CIPMUX=0", "\r\n\r\nOK\r\n");
+    stubAppendAtCommand("AT+CWJAP=\"testName\",\"testPwd\"", "\r\nWIFI CONNECTED\r\nWIFI GOT IP\r\n\r\nOK\r\n");
+    wifiPtr->connect("testName", "testPwd");
 }

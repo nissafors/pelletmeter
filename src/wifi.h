@@ -8,7 +8,6 @@
 
 static const uint8_t CMD_BUF_SIZE = 64;
 static const uint16_t RCV_BUF_SIZE = 256;
-static const uint16_t REQUEST_BUF_SIZE = 256;
 
 class WiFi
 {
@@ -18,18 +17,13 @@ private:
     bool connected;
     char cmdBuf[CMD_BUF_SIZE];
     char rcvBuf[RCV_BUF_SIZE];
-    char requestBuf[REQUEST_BUF_SIZE];
-    int requestBufIdx;
     bool executeAT(const char* cmd, char* rcvPtr, int len, int timeout);
-    bool isGetRequest();
     bool readByte(char* chPtr, int timeout);
 public:
     WiFi(int rx, int tx, int verbosity);
-    bool connect(const char* name, const char* pwd);
-    bool startServer(int port);
+    bool connect(const char* ssid, const char* pwd);
     bool getIP(char* ipPtr);
-    bool getRequestDetected();
-    void sendResponse(const char* body, const char* contentType = "text/html");
+    bool sendTCP(const char* msg, const char* address, int port);
 };
 
 #endif // WIFI_H
