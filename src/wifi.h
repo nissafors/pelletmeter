@@ -20,7 +20,7 @@ private:
     char rcvBuf[RCV_BUF_SIZE];
     char requestBuf[REQUEST_BUF_SIZE];
     int requestBufIdx;
-    bool executeAT(const char* cmd, char* rcvPtr, int len);
+    bool executeAT(const char* cmd, char* rcvPtr, int len, int timeout);
     bool isGetRequest();
     bool readByte(char* chPtr, int timeout);
 public:

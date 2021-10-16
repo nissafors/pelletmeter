@@ -20,10 +20,10 @@ bool WiFi::connect(const char* name, const char* pwd)
 {
     esp8266.begin(9600);
 
-    if (executeAT("AT+CWMODE=3", rcvBuf, RCV_BUF_SIZE))
+    if (executeAT("AT+CWMODE=3", rcvBuf, RCV_BUF_SIZE, LONG_TIMEOUT))
     {
         snprintf(cmdBuf, CMD_BUF_SIZE, "AT+CWJAP=\"%s\",\"%s\"", name, pwd);
-        connected = executeAT(cmdBuf, rcvBuf, RCV_BUF_SIZE);
+        connected = executeAT(cmdBuf, rcvBuf, RCV_BUF_SIZE, LONG_TIMEOUT);
     }
 
     return connected;
@@ -33,10 +33,10 @@ bool WiFi::startServer(int port)
 {
     bool result = false;
 
-    if (connected && executeAT("AT+CIPMUX=1", rcvBuf, RCV_BUF_SIZE))
+    if (connected && executeAT("AT+CIPMUX=1", rcvBuf, RCV_BUF_SIZE, SHORT_TIMEOUT))
     {
         snprintf(cmdBuf, CMD_BUF_SIZE, "AT+CIPSERVER=1,%d", port);
-        result = executeAT(cmdBuf, rcvBuf, RCV_BUF_SIZE);
+        result = executeAT(cmdBuf, rcvBuf, RCV_BUF_SIZE, SHORT_TIMEOUT);
     }
 
     return result;
@@ -44,24 +44,37 @@ bool WiFi::startServer(int port)
 
 bool WiFi::getIP(char* ipPtr)
 {
-    bool result = false;
-
     if (connected)
     {
-        int i, j;
-        executeAT("AT+CIFSR", rcvBuf, RCV_BUF_SIZE);
-        for (i = 0, j = 25; i < 15; i++, j++)
+        executeAT("AT+CIFSR", rcvBuf, RCV_BUF_SIZE, SHORT_TIMEOUT);
+        for (int i = 0; i < RCV_BUF_SIZE; i++)
         {
-            if (rcvBuf[j] == '"')
+            if (i > 3 && strncmp(&rcvBuf[i - 6], "STAIP,\"", 7) == 0)
             {
-                break;
+                if (RCV_BUF_SIZE - i < 16)
+                {
+                    // rcvBuf was too small to fit IP address.
+                    return false;
+                }
+
+                // Copy IP address and return.
+                int rcvIdx, outIdx;
+                for (rcvIdx = i + 1, outIdx = 0; outIdx < 15; rcvIdx++, outIdx++)
+                {
+                    if (rcvBuf[rcvIdx] == '"')
+                    {
+                        break;
+                    }
+                    ipPtr[outIdx] = rcvBuf[rcvIdx];
+                }
+                ipPtr[outIdx] = '\0';
+                return true;
             }
-            ipPtr[i] = rcvBuf[j];
         }
-        ipPtr[i] = '\0';
     }
 
-    return result;
+    // Not connected or STAIP not found in response.
+    return false;
 }
 
 bool WiFi::getRequestDetected()
@@ -107,7 +120,7 @@ void WiFi::sendResponse(const char* body, const char* contentType)
     logger.log(totalLen, 2, true);
 
     snprintf(atCmdStr, 18, "AT+CIPSEND=0,%d", totalLen);
-    if (executeAT(atCmdStr, rcvBuf, RCV_BUF_SIZE))
+    if (executeAT(atCmdStr, rcvBuf, RCV_BUF_SIZE, SHORT_TIMEOUT))
     {
         logger.log(statusLine, 2);
         logger.log(contentLengthHdr, 2);
@@ -132,7 +145,7 @@ void WiFi::sendResponse(const char* body, const char* contentType)
 
 // Private
 
-bool WiFi::executeAT(const char* cmd, char* rcvPtr, int len)
+bool WiFi::executeAT(const char* cmd, char* rcvPtr, int len, int timeout)
 {
     bool result = false;
     int i = 0;
@@ -146,26 +159,37 @@ bool WiFi::executeAT(const char* cmd, char* rcvPtr, int len)
     // Send command
     esp8266.println(cmd);
 
+    unsigned long then = millis();
+
     // Parse response
-    while (readByte(&rcvPtr[i], SHORT_TIMEOUT))
+    while (i < len)
     {
-        logger.log(rcvPtr[i], 1);
-
-        if (i > 3 && strncmp(&rcvPtr[i-3], "OK\r\n", 4) == 0)
+        if (millis() - then > (unsigned long) timeout)
         {
-            result = true;
             break;
         }
 
-        if (i > 6 && strncmp(&rcvPtr[i-6], "ERROR\r\n", 7) == 0)
+        if (readByte(&rcvPtr[i], 100))
         {
-            result = false;
-            break;
-        }
+            logger.log(rcvPtr[i], 1);
 
-        if (++i >= len)
-        {
-            break;
+            if (i > 3 && strncmp(&rcvPtr[i-3], "OK\r\n", 4) == 0)
+            {
+                result = true;
+                break;
+            }
+            else if (i > 6 && strncmp(&rcvPtr[i-6], "ERROR\r\n", 7) == 0)
+            {
+                result = false;
+                break;
+            }
+            else if (i > 6 && strncmp(&rcvPtr[i-4], "FAIL\r\n", 5   ) == 0)
+            {
+                result = false;
+                break;
+            }
+
+            ++i;
         }
     }
     

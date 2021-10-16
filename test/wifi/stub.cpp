@@ -7,6 +7,9 @@
 #include "log.h"
 #include <string>
 #include <deque>
+#include <stdexcept>
+
+const unsigned long MAX_MS = 0xFFFF;
 
 bool init = false;
 int logVerbosity;
@@ -141,5 +144,9 @@ void Log::log(const int i, int verbosity, bool lf)
 
 unsigned long millis()
 {
-    return ms++;
+    if (++ms > MAX_MS)
+    {
+        throw std::out_of_range("ms too big.");
+    }
+    return ms;
 }
