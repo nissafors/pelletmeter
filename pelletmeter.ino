@@ -4,6 +4,7 @@
 #include "src/panic.h"
 #include "src/wifi.h"
 #include "src/distance.h"
+#include "src/request.h"
 #include "settings.h"
 
 // Global data
@@ -12,7 +13,6 @@ WiFi wifi(7, 6, 2);
 Distance distance(11, 12);
 char ipBuf[16];
 const uint16_t POST_BUF_SIZE = 64;
-char postBuf[POST_BUF_SIZE];
 
 // Functions
 
@@ -50,8 +50,8 @@ void loop()
         Serial.println(cm);
 
         // Post to server
-        snprintf(postBuf, POST_BUF_SIZE, "POST / HTTP/1.1 \r\n\r\n%d", cm);
-        if (wifi.sendTCP(postBuf, serverAddr, serverPort))
+        char* request = createPostRequest(cm, serverAddr, serverPort);
+        if (wifi.sendTCP(request, serverAddr, serverPort))
         {
             Serial.println("Send OK.");
         }
