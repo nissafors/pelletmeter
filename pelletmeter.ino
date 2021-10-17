@@ -6,11 +6,15 @@
 #include "src/distance.h"
 #include "settings.h"
 
+// Global data
+
 WiFi wifi(7, 6, 2);
 Distance distance(11, 12);
 char ipBuf[16];
 const uint16_t POST_BUF_SIZE = 64;
 char postBuf[POST_BUF_SIZE];
+
+// Functions
 
 void setup()
 {
@@ -28,22 +32,32 @@ void setup()
     Serial.print("IP address: ");
     Serial.println(ipBuf);
     Serial.println("Ready.");
-
 }
 
 void loop()
 {
     static uint16_t cm = 0;
+    static uint32_t lastRunTs = 0;
+    
+    // Run every interval seconds
+    if (millis() - lastRunTs > interval * 1000)
+    {
+        lastRunTs = millis();
 
-    // Detect distance
-    cm = distance.detect();
-    Serial.print("Distance: ");
-    Serial.println(cm);
+        // Detect distance
+        cm = distance.detect();
+        Serial.print("Distance: ");
+        Serial.println(cm);
 
-    // Post to server
-    snprintf(postBuf, POST_BUF_SIZE, "POST / HTTP/1.1 \r\n\r\n%d", cm);
-    wifi.sendTCP(postBuf, serverAddr, serverPort);
-
-    // Wait 5s
-    delay(5000);
+        // Post to server
+        snprintf(postBuf, POST_BUF_SIZE, "POST / HTTP/1.1 \r\n\r\n%d", cm);
+        if (wifi.sendTCP(postBuf, serverAddr, serverPort))
+        {
+            Serial.println("Send OK.");
+        }
+        else
+        {
+            Serial.println("Send failed!");
+        }
+    }
 }
