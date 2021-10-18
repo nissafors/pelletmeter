@@ -5,33 +5,41 @@
 #include "src/wifi.h"
 #include "src/distance.h"
 #include "src/request.h"
+#include "src/leds.h"
 #include "settings.h"
 
 // Global data
 
+const uint16_t POST_BUF_SIZE = 64;
+char ipBuf[16];
+uint8_t ledPins[] = {2, 4, 8};
+
 WiFi wifi(7, 6, 2);
 Distance distance(11, 12);
-char ipBuf[16];
-const uint16_t POST_BUF_SIZE = 64;
+LEDs leds(ledPins);
 
 // Functions
 
 void setup()
 {
+    leds.sequence(LED_SEQUENCE_POWER_ON);
+    delay(200);
+    // Indicate connecting
+    leds.shine(LED_YELLOW);
+
     // Connect to WiFi
     Serial.begin(9600);
     Serial.println("Connecting to WiFi...");
     if (!wifi.connect(wifiSSID, wifiPassword))
     {
+        leds.extinguish(LED_YELLOW);
+        leds.shine(LED_RED);
         PANIC("Failed to connect.");
     }
     Serial.println("Connected.");
 
-    // Get IP
-    wifi.getIP(ipBuf);
-    Serial.print("IP address: ");
-    Serial.println(ipBuf);
-    Serial.println("Ready.");
+    leds.sequence(LED_SEQUENCE_CONNECTED);
+    delay(200);
 }
 
 void loop()
@@ -43,6 +51,7 @@ void loop()
     if (millis() - lastRunTs > interval * 1000)
     {
         lastRunTs = millis();
+        leds.shine(LED_YELLOW);
 
         // Detect distance
         cm = distance.detect();
@@ -53,10 +62,12 @@ void loop()
         char* request = createPostRequest(cm, serverAddr, serverPort);
         if (wifi.sendTCP(request, serverAddr, serverPort))
         {
+            leds.sequence(LED_SEQUENCE_SEND_OK);
             Serial.println("Send OK.");
         }
         else
         {
+            leds.sequence(LED_SEQUENCE_SEND_FAIL);
             Serial.println("Send failed!");
         }
     }
