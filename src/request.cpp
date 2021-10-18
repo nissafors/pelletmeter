@@ -9,7 +9,7 @@ static const int REQUEST_BUF_SIZE = 78 + 64 + BODY_BUF_SIZE;
 static char requestBuf[REQUEST_BUF_SIZE];
 
 const char* postTmpl = "POST / HTTP/1.1 \r\nHost: %s:%d\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n%s";
-const char* bodyTmpl = "{\n  cm: %d\n}";
+const char* bodyTmpl = "{\n  \"cm\": %d\n}";
 
 char* createPostRequest(const int measurement, const char* host, const int port)
 {

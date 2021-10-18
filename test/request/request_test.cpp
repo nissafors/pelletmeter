@@ -17,7 +17,7 @@ TEST_GROUP(testGroupNormal)
 
 TEST(testGroupNormal, testCreatePostRequest)
 {
-    const char* expected = "POST / HTTP/1.1 \r\nHost: www.example.com:80\r\nContent-Type: application/json\r\nContent-Length: 13\r\n\r\n{\n  cm: 111\n}";
+    const char* expected = "POST / HTTP/1.1 \r\nHost: www.example.com:80\r\nContent-Type: application/json\r\nContent-Length: 15\r\n\r\n{\n  \"cm\": 111\n}";
     char* actual = createPostRequest(111, "www.example.com", 80);
     STRCMP_EQUAL( expected, actual );
 }
