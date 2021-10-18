@@ -20,80 +20,45 @@ bool WiFi::connect(const char* ssid, const char* pwd)
 
     // Rest a moment before making sure we're not connected to any access points.
     delay(200);
-    if (executeAT("AT+CWQAP", rcvBuf, RCV_BUF_SIZE, LONG_TIMEOUT))
+    if (executeAT("AT+CWQAP", atBuf, AT_BUF_SIZE, LONG_TIMEOUT))
     {
         // Wait a moment to avoid strange serial buffer behavior.
         delay(100);
         // Set station mode and single connection.
-        if (executeAT("AT+CWMODE=1", rcvBuf, RCV_BUF_SIZE, LONG_TIMEOUT) && executeAT("AT+CIPMUX=0", rcvBuf, RCV_BUF_SIZE, SHORT_TIMEOUT))
+        if (executeAT("AT+CWMODE=1", atBuf, AT_BUF_SIZE, LONG_TIMEOUT) && executeAT("AT+CIPMUX=0", atBuf, AT_BUF_SIZE, SHORT_TIMEOUT))
         {
             // Connect to access point.
-            snprintf(cmdBuf, CMD_BUF_SIZE, "AT+CWJAP=\"%s\",\"%s\"", ssid, pwd);
-            connected = executeAT(cmdBuf, rcvBuf, RCV_BUF_SIZE, LONG_TIMEOUT);
+            snprintf(atBuf, AT_BUF_SIZE, "AT+CWJAP=\"%s\",\"%s\"", ssid, pwd);
+            connected = executeAT(atBuf, atBuf, AT_BUF_SIZE, LONG_TIMEOUT);
         }
-
     }
-
 
     return connected;
-}
-
-bool WiFi::getIP(char* ipPtr)
-{
-    if (connected)
-    {
-        executeAT("AT+CIFSR", rcvBuf, RCV_BUF_SIZE, SHORT_TIMEOUT);
-        for (int i = 0; i < RCV_BUF_SIZE; i++)
-        {
-            if (i > 3 && strncmp(&rcvBuf[i - 6], "STAIP,\"", 7) == 0)
-            {
-                if (RCV_BUF_SIZE - i < 16)
-                {
-                    // rcvBuf was too small to fit IP address.
-                    return false;
-                }
-
-                // Copy IP address and return.
-                int rcvIdx, outIdx;
-                for (rcvIdx = i + 1, outIdx = 0; outIdx < 15; rcvIdx++, outIdx++)
-                {
-                    if (rcvBuf[rcvIdx] == '"')
-                    {
-                        break;
-                    }
-                    ipPtr[outIdx] = rcvBuf[rcvIdx];
-                }
-                ipPtr[outIdx] = '\0';
-                return true;
-            }
-        }
-    }
-
-    // Not connected or STAIP not found in response.
-    return false;
 }
 
 bool WiFi::sendTCP(const char* msg, const char* address, int port)
 {
     bool result = false;
 
-    // Reuse receive buffer as command buffer and connect to given address
-    snprintf(rcvBuf, RCV_BUF_SIZE, "AT+CIPSTART=\"TCP\",\"%s\",%d", address, port);
-    if (executeAT(rcvBuf, rcvBuf, RCV_BUF_SIZE, LONG_TIMEOUT))
+    // Connect to given address
+    snprintf(atBuf, AT_BUF_SIZE, "AT+CIPSTART=\"TCP\",\"%s\",%d", address, port);
+    if (executeAT(atBuf, atBuf, AT_BUF_SIZE, LONG_TIMEOUT))
     {
-        // Send
-        snprintf(rcvBuf, RCV_BUF_SIZE, "AT+CIPSEND=%d", (int) strlen(msg));
-        if (executeAT(rcvBuf, rcvBuf, RCV_BUF_SIZE, LONG_TIMEOUT))
+        // Enter send mode
+        snprintf(atBuf, AT_BUF_SIZE, "AT+CIPSEND=%d", (int) strlen(msg));
+        if (executeAT(atBuf, atBuf, AT_BUF_SIZE, LONG_TIMEOUT))
         {
+            // Send data
             logger.log(msg, 2, true);
             esp8266.print(msg);
             char byte;
             int i = 0;
+            // Await SEND OK
             while(readByte(&byte, 100))
             {
                 logger.log(byte, 1);
-                rcvBuf[i] = byte;
-                if (i > 8 && strncmp(&rcvBuf[i-8], "SEND OK\r\n", 9) == 0)
+                atBuf[i] = byte;
+                if (i > 8 && strncmp(&atBuf[i-8], "SEND OK\r\n", 9) == 0)
                 {
                     result = true;
                 }

@@ -31,10 +31,8 @@ TEST_GROUP(testGroupNormal)
 TEST(testGroupNormal, testConstruct)
 {
     Distance distance(1, 2);
-    CHECK_EQUAL(1, distance.trigPin);
-    CHECK_EQUAL(2, distance.echoPin);
-    CHECK_EQUAL(OUTPUT, stubGetPinMode(distance.trigPin));
-    CHECK_EQUAL(INPUT, stubGetPinMode(distance.echoPin));
+    CHECK_EQUAL(OUTPUT, stubGetPinMode(1));
+    CHECK_EQUAL(INPUT, stubGetPinMode(2));
 }
 
 TEST(testGroupNormal, testDetect)

@@ -51,7 +51,8 @@ void loop()
     if (millis() - lastRunTs > interval * 1000)
     {
         lastRunTs = millis();
-        leds.shine(LED_YELLOW);
+        // Indicate sending
+        leds.shine(LED_GREEN);
 
         // Detect distance
         cm = distance.detect();

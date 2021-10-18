@@ -80,47 +80,6 @@ TEST(testGroupBasic, testConnectTimeout)
     CHECK_FALSE(wifi.connect("anyName", "anyPwd"));
 }
 
-// Test that getIP returns false when not connected.
-TEST(testGroupBasic, testGetIPFailWhenNotConnected)
-{
-    auto wifi = WiFi(10, 11, 2);
-    char ip[16] = "aaa.bbb.ccc.ddd";
-    CHECK_FALSE(wifi.getIP(ip));
-}
-
-// Test that can get IP address if connected.
-TEST(testGroupBasic, testGetIPWhenConnected)
-{
-    auto wifi = WiFi(10, 11, 2);
-    connect(&wifi);
-
-    // Full length IP: 192.168.100.100
-    // Expected AT command to get IP address, shall respond with info and OK.
-    stubAppendAtCommand("AT+CIFSR", "+CIFSR:STAIP,\"192.168.100.100\"\r\n+CIFSR:STAMAC,\"84:f3:eb:5b:10:e6\"\r\n\r\nOK\r\n");
-    // Get IP
-    char ip[16] = "aaa.bbb.ccc.ddd";
-    CHECK(wifi.getIP(ip));
-    STRCMP_EQUAL("192.168.100.100", ip);
-
-    // Shorter IP: 192.168.1.100
-    stubAppendAtCommand("AT+CIFSR", "+CIFSR:STAIP,\"192.168.1.100\"\r\n+CIFSR:STAMAC,\"84:f3:eb:5b:10:e6\"\r\n\r\nOK\r\n");
-    CHECK(wifi.getIP(ip));
-    STRCMP_EQUAL("192.168.1.100", ip);
-}
-
-// Test that getIP return false on unexpected response.
-TEST(testGroupBasic, testGetIPFailOnBadResponse)
-{
-    auto wifi = WiFi(10, 11, 2);
-    connect(&wifi);
-
-    // Expected AT command to get IP address, malformed response.
-    stubAppendAtCommand("AT+CIFSR", "+CIFSR:STA___RUBBISH___:5b:10:e6\"\r\n\r\nOK\r\n");
-    // Get IP
-    char ip[16] = "aaa.bbb.ccc.ddd";
-    CHECK_FALSE(wifi.getIP(ip));
-}
-
 // Test that can send as TCP client
 TEST(testGroupBasic, testSendTCP)
 {

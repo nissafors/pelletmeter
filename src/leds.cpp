@@ -10,6 +10,7 @@ LEDs::LEDs(const uint8_t* pins)
 {
     for (int i = 0; i < N_LEDS; i++)
     {
+        // Assign, set output mode for, and reset, pins.
         this->pins[i] = pins[i];
         pinMode(pins[i], OUTPUT);
         digitalWrite(pins[i], LOW);
@@ -53,11 +54,13 @@ void LEDs::sequence(const sequence_t sequence)
         break;
     case LED_SEQUENCE_SEND_OK:
         // Blink green twice
+        delay(BLINK_DELAY_MS);
         blink(&allLEDs[LED_GREEN], 1);
         blink(&allLEDs[LED_GREEN], 1);
         break;
     case LED_SEQUENCE_SEND_FAIL:
         // Blink red twice
+        delay(BLINK_DELAY_MS);
         blink(&allLEDs[LED_RED], 1);
         blink(&allLEDs[LED_RED], 1);
         break;

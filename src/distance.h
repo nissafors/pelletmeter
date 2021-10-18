@@ -3,16 +3,31 @@
 #ifndef DISTANCE_H
 #define DISTANCE_H
 
-// Distance measurements using the HC-SR04 sensor.
-
 #include <stdint.h>
 
+/**
+ * Distance measurements using the HC-SR04 sensor.
+ */ 
 class Distance
 {
-public:
+private:
     int trigPin;
     int echoPin;
+
+public:
+    /**
+     * Construct a new Distance instance.
+     * 
+     * @param trigPin   Number of pin connected to HC-SR04 trig.
+     * @param echoPin   number of pin connected to HC-SR04 echo.
+     */
     Distance(int trigPin, int echoPin);
+
+    /**
+     * Detect distance.
+     * 
+     * @return The distance to the nearest object in cm.
+     */
     uint16_t detect();
 };
 
