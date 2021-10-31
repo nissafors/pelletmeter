@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Pelletmeter</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Bootstrap -->
+    <link href="{{ url_for('static', filename='bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid" id="app-header">
+        <div class="container">
+            <header class="d-flex flex-wrap justify-content-center py-3 mb-4 border-bottom">
+                <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto me-3 text-dark text-decoration-none">
+                    <span class="fs-4" id="app-title">Pelletmeter</span>
+                </a>
+            
+                <div class="dropdown">
+                    <button class="btn btn-secondary dropdown-toggle" type="button" id="plotPeriodDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        Plot period
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="plotPeriodDropdown">
+                        <li><a class="dropdown-item" href="/last24h">24 hours</a></li>
+                        <li><a class="dropdown-item" href="/last7d">7 days</a></li>
+                        <li><a class="dropdown-item" href="/last30d">30 days</a></li>
+                        <li><a class="dropdown-item" href="/last365d">365 days</a></li>
+                    </ul>
+                </div>
+            </header>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="alert {{ lvm.bs_class }} opacity-75" role="alert">
+            Current level: <strong>{{ lvm.current_level }}</strong>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="graph"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='plotly-2.4.2.min.js') }}"></script>
+    <script>
+        var Data = {
+            type: 'scatter',
+            x: [{{ lvm.x_axis|safe }}],
+            y: [{{ lvm.y_axis }}],
+            mode: 'lines',
+            name: 'Level',
+            showlegend: true,
+            hoverinfo: 'all',
+            line: {
+                color: 'purple',
+                width: 2
+            }
+        }
+
+        var High = {
+            type: 'scatter',
+            x: [{{ lvm.x_axis[0:18]|safe }}, {{ lvm.x_axis[-18:]|safe }}],
+            y: [{{ lvm.level_high_limit }}, {{ lvm.level_high_limit }}],
+            mode: 'lines',
+            name: 'Limit High',
+            showlegend: true,
+            line: {
+                color: 'green',
+                width: 2,
+                dash: 'dash'
+            }
+        }
+
+        var Low = {
+            type: 'scatter',
+            x: [{{ lvm.x_axis[0:18]|safe }}, {{ lvm.x_axis[-18:]|safe }}],
+            y: [{{ lvm.level_low_limit }}, {{ lvm.level_low_limit }}],
+            mode: 'lines',
+            name: 'Limit Low',
+            showlegend: true,
+            line: {
+                color: 'red',
+                width: 2,
+                dash: 'dash'
+            }
+        }
+        
+        var data = [Data,High,Low]
+
+        var layout = {
+            title: 'Level last {{ lvm.period }}',
+            xaxis: {
+                zeroline: false
+            },
+            yaxis: {
+                range: [{{ lvm.level_min }},{{ lvm.level_max }}],
+                zeroline: false
+            },
+            showlegend: true,
+            legend: { xanchor: 'center', x: {{ lvm.x_axis[0:18]|safe }}, orientation: 'h', bgcolor: "rgba(0,0,0,0)" },
+            paper_bgcolor: "rgba(255,255,255,0.8)",
+            plot_bgcolor: "rgba(0,0,0,0)"
+        }
+
+        var config = {responsive: true}
+
+        Plotly.newPlot('graph', data, layout, config);
+    </script>
+</body>
+</html>

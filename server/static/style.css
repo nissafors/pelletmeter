@@ -1,0 +1,16 @@
+body {
+    background-image: url("background.jpg");
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-size: cover;
+}
+
+#app-header {
+    background-color: white;
+}
+
+#app-title {
+    color: #800080;
+    font-weight: bold;
+    text-transform: uppercase;
+}
