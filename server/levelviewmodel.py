@@ -1,3 +1,5 @@
+__copyright__ = "Copyright (C) 2021 Andreas Andersson"
+
 import json, datetime
 from json.decoder import JSONDecodeError
 from levelmodel import LevelModel

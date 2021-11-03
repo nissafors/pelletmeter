@@ -1,6 +1,7 @@
+__copyright__ = "Copyright (C) 2021 Andreas Andersson"
+
 import unittest, datetime, os
 from levelmodel import LevelModel
-import sqlite3
 
 TEST_DB = "test_pelletmeter.db"
 

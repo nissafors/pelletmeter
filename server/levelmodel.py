@@ -1,3 +1,5 @@
+__copyright__ = "Copyright (C) 2021 Andreas Andersson"
+
 import sqlite3, os, statistics, sys, datetime
 
 def level_model_ts_func(**kwargs):

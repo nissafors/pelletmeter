@@ -1,12 +1,16 @@
+__copyright__ = "Copyright (C) 2021 Andreas Andersson"
+
 from flask import Flask, request, render_template
 from levelmodel import LevelModel
-from werkzeug.wrappers import response
-import http
-
+import http, settings
 from levelviewmodel import LevelViewModel
 
 app = Flask(__name__)
-level_view_model = LevelViewModel(LevelModel(raw_data_bounds=(40, 130), level_bounds=(90, 0)), 30, 60)
+level_view_model = LevelViewModel(LevelModel(raw_data_bounds=settings.measurement_bounds, level_bounds=settings.level_bounds), settings.level_low, settings.level_high)
+
+def log(msg):
+    if settings.verbose:
+        print(msg)
 
 @app.route("/", methods=['GET', 'POST'])
 def home():
@@ -15,7 +19,9 @@ def home():
         return render_template('home.html', lvm=level_view_model)
     elif request.method == 'POST':
         body = request.data.decode('ascii')
+        log(body)
         result = level_view_model.post(body)
+        log(level_view_model.level_model.measurements)
         code = http.HTTPStatus.NO_CONTENT if result else http.HTTPStatus.BAD_REQUEST
         return ('', code)
  
