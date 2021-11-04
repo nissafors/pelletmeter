@@ -4,7 +4,7 @@
 #include "panic.h"
 #include <Arduino.h>
 
-static const int SHORT_TIMEOUT = 5000;
+static const int SHORT_TIMEOUT = 1000;
 static const int LONG_TIMEOUT = 10000;
 
 // Public
@@ -25,7 +25,7 @@ bool WiFi::connect(const char* ssid, const char* pwd)
         // Wait a moment to avoid strange serial buffer behavior.
         delay(100);
         // Set station mode and single connection.
-        if (executeAT("AT+CWMODE=1", atBuf, AT_BUF_SIZE, LONG_TIMEOUT) && executeAT("AT+CIPMUX=0", atBuf, AT_BUF_SIZE, SHORT_TIMEOUT))
+        if (executeAT("AT+CWMODE=1", atBuf, AT_BUF_SIZE, LONG_TIMEOUT) && executeAT("AT+CIPMUX=0", atBuf, AT_BUF_SIZE, LONG_TIMEOUT))
         {
             // Connect to access point.
             snprintf(atBuf, AT_BUF_SIZE, "AT+CWJAP=\"%s\",\"%s\"", ssid, pwd);
@@ -54,7 +54,7 @@ bool WiFi::sendTCP(const char* msg, const char* address, int port)
             char byte;
             int i = 0;
             // Await SEND OK
-            while(readByte(&byte, 100))
+            while(readByte(&byte, SHORT_TIMEOUT))
             {
                 logger.log(byte, 1);
                 atBuf[i] = byte;
@@ -66,6 +66,8 @@ bool WiFi::sendTCP(const char* msg, const char* address, int port)
             }
         }
     }
+
+    executeAT("AT+CIPCLOSE", atBuf, AT_BUF_SIZE, LONG_TIMEOUT);
 
     return result;
 }
@@ -97,7 +99,7 @@ bool WiFi::executeAT(const char* cmd, char* rcvPtr, int len, int timeout)
             break;
         }
 
-        if (readByte(&rcvPtr[i], 100))
+        if (readByte(&rcvPtr[i], SHORT_TIMEOUT))
         {
             logger.log(rcvPtr[i], 1);
 

@@ -92,6 +92,8 @@ TEST(testGroupBasic, testSendTCP)
     stubAppendAtCommand("AT+CIPSEND=12", "\r\n\r\nOK\r\n");
     // This is what we send.
     stubAppendAtCommand("test message", "Recv 12 bytes\r\n\r\nSEND OK\r\n");
+    // Closing the connection
+    stubAppendAtCommand("AT+CIPCLOSE", "\r\r\nCLOSED\r\n\r\nOK\r\n");
     CHECK(wifi.sendTCP("test message", "http://www.fake.com", 80));
 }
 
